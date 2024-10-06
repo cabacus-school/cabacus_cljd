@@ -1,0 +1,72 @@
+(ns acme.abacus
+  (:require ["package:flutter/material.dart" :as m]
+            ["dart:core" :as dc]
+            [cljd.flutter :as f]
+            [acme.state :refer [!size !color]]))
+
+(def bead
+  (f/widget
+   :watch [{:keys [width height]} !size]
+   :width width :height height :padding {:horizontal 2}
+   (m/Container .decoration (m/BoxDecoration))
+   (f/widget
+    :watch [{:keys [seed-color]} !color]
+    :let [shade-color (m/Color.lerp seed-color m/Colors.black 0.07)]
+    :get {{{:flds [onPrimaryContainer]} .-colorScheme} m/Theme}
+    m/Container
+    .decoration
+    (m/ShapeDecoration
+     .gradient (m/LinearGradient
+                .begin m/Alignment.topCenter
+                .end m/Alignment.bottomCenter
+                .stops [0 0.46 0.54 1]
+                .colors [seed-color seed-color shade-color shade-color]))
+    .shape
+    (m/BeveledRectangleBorder
+     .borderRadius (m/BorderRadius.all
+                    (m/Radius.elliptical (/ width 3) (dec (/ height 2))))
+     .side (m/BorderSide .width 0.1
+                         .color onPrimaryContainer
+                         .strokeAlign m/BorderSide.strokeAlignCenter)))))
+
+(defn rod [.child]
+  (f/widget
+   (f/widget
+    :get {{{:flds [surfaceContainerHighest]} .-colorScheme} m/Theme}
+    (m/Container .decoration (m/BoxDecoration .color surfaceContainerHighest)
+                 .clipBehavior m/Clip.antiAlias))
+   (m/Stack .alignment m/Alignment.topCenter
+            .clipBehavior m/Clip.antiAlias)
+   .children
+   [(f/widget
+     (f/widget :watch [{:keys [rod-width]} !size] :width rod-width)
+     :get {{{:flds [onSurface outline]} .-colorScheme} m/Theme}
+     :get [:rod3?]
+     m/Container
+     .decoration
+     m/BoxDecoration
+     .color
+     (.withOpacity (if rod3? onSurface outline) 0.5))
+    child]))
+
+(def upper-rod
+  (f/widget
+   (f/widget
+    :watch [{:keys [width height]} !size]
+    :width width :height (* 1.5 height))
+   (m/Stack .alignment m/Alignment.center)
+   .children
+   [(f/widget
+     rod
+     :let [digit 8]
+     (m/AnimatedAlign
+      .alignment (if (< digit 5)
+                   m/Alignment.topCenter
+                   m/Alignment.bottomCenter)
+      ; TODO refactor duration
+      .duration (dc/Duration .milliseconds 400)
+      .curve m/Curves.easeOutExpo)
+     (m/GestureDetector .onTapDown nil)
+     bead)
+    ; TODO hint number here
+    ]))

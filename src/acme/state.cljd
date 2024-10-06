@@ -1,0 +1,43 @@
+(ns acme.state
+  (:require ["package:flutter/material.dart" :as m]
+            [cljd.flutter :as f]))
+;; COLORS
+
+(def colors
+  (update-vals
+   {:amber m.Colors/amber
+    :blue-grey m.Colors/blueGrey
+    :grey m.Colors/grey
+    :light-blue-accent m.Colors/lightBlueAccent
+    :purple-accent m.Colors/purpleAccent
+    :light-green m.Colors/lightGreen}
+   (fn [seed-color]
+     {:seed-color seed-color
+      :color-scheme (m/ColorScheme.fromSeed .seedColor seed-color)})))
+
+(defonce !color-key (atom :amber))
+
+(def !color (f/$ (colors (f/<! !color-key))))
+
+;; STYLE
+
+(def style-ratios (update-vals {:narrow 3/2 :wide 5/3} double))
+
+(defonce !style-ratio-key (atom :wide))
+
+(def !style-ratio (f/$ (style-ratios (f/<! !style-ratio-key))))
+
+;; SIZES
+
+(def sizes-base {:small  {:height 36 :rod-width 12}
+                 :medium {:height 42 :rod-width 14}
+                 :large  {:height 48 :rod-width 16}})
+
+(defonce !size-key (atom :medium))
+
+(def !size
+  (f/$ (let [{:keys [height] :as size-props} (sizes-base (f/<! !size-key))]
+         (->> (f/<! !style-ratio-key)
+              style-ratios
+              (* height)
+              (assoc size-props :width)))))
