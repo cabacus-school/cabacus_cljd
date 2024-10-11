@@ -21,6 +21,8 @@
 
 ;; STYLE
 
+(def frame-width 6)
+
 (def style-ratios (update-vals {:narrow 3/2 :wide 5/3} double))
 
 (defonce !style-ratio-key (atom :wide))

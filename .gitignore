@@ -50,3 +50,6 @@ test/cljd-out/
 
 .clj-kondo/.cache
 .lsp/
+
+# FVM Version Cache
+.fvm/
