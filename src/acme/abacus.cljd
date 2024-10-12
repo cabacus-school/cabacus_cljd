@@ -4,7 +4,7 @@
             ["dart:ui" :as ui]
             ["dart:core" :as dc]
             [cljd.flutter :as f]
-            [acme.state :refer [!size !color !digits frame-width]]))
+            [acme.state :refer [!size !color !digits !num-hint? frame-width]]))
 
 (def bead
   (f/widget
@@ -60,29 +60,43 @@
   (f/widget
    (f/widget
     :watch [{:keys [width height]} !size] :width width :height (* 1.5 height))
+   :get [:!seen-digits :idx]
+   :watch [num-hint? !num-hint?]
    (m/Stack .alignment m/Alignment.center)
    .children
-   [(rod
-     (f/widget
-      :get [:!seen-digits :idx]
-      :watch [^List {seen-length .-length digit idx} !seen-digits]
-      (m/AnimatedAlign
-       .alignment (if (< digit 5)
-                    m/Alignment.topCenter
-                    m/Alignment.bottomCenter)
-       .duration bead-animation-duration
-       .curve bead-animation-curve)
-      (m/GestureDetector
-       .onTapDown (fn [_]
-                    (s/HapticFeedback.lightImpact)
-                    (swap! !digits
-                           (fn [^List {:flds [length] :as digits}]
-                             (update digits
-                                     (+ idx (- length seen-length))
-                                     #((if (< % 5) + -) % 5))))))
-      bead))
-    ; TODO hint number here
-    ]))
+   (remove
+    nil?
+    [(rod
+      (f/widget
+       :watch [{digit idx} !seen-digits]
+       (m/AnimatedAlign
+        .alignment (if (< digit 5)
+                     m/Alignment.topCenter
+                     m/Alignment.bottomCenter)
+        .duration bead-animation-duration
+        .curve bead-animation-curve)
+       :watch [^List {seen-length .-length} !seen-digits]
+       (m/GestureDetector
+        .onTapDown (fn [_]
+                     (s/HapticFeedback.lightImpact)
+                     (swap! !digits
+                            (fn [^List {:flds [length] :as digits}]
+                              (update digits
+                                      (+ idx (- length seen-length))
+                                      #((if (< % 5) + -) % 5))))))
+       bead))
+     (when num-hint?
+       (f/widget
+        m/IgnorePointer
+        :watch [{digit idx} !seen-digits]
+        :get {{{:flds [bodyLarge]} .-textTheme} m/Theme}
+        (m/Text
+         (str digit)
+         .style (.copyWith bodyLarge
+                        ; .fontFamily ; TODO define this
+                           .color m/Colors.black
+                           .shadows [(m/Shadow .color m/Colors.white
+                                               .blurRadius 10)]))))])))
 
 (def lower-rod-reference [[1 2 3 4]
                           [0 2 3 4]
@@ -107,7 +121,7 @@
       (fn [bead-idx]
         (f/widget
          :get [:!seen-digits :idx]
-         :watch [^List {seen-length .-length digit idx} !seen-digits]
+         :watch [^List {seen-length .-length, digit idx} !seen-digits]
          (m/AnimatedSlide
           .offset (ui/Offset 0 (if (< bead-idx (mod digit 5)) -0.5 0))
           .duration bead-animation-duration

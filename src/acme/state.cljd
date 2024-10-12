@@ -48,3 +48,5 @@
 ;; DIGITS
 
 (defonce !digits (atom nil))
+
+(defonce !num-hint? (atom true))
