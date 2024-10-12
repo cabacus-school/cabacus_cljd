@@ -64,8 +64,8 @@
    .children
    [(rod
      (f/widget
-      :get [:idx]
-      :watch [{digit idx} !digits]
+      :get [:!seen-digits :idx]
+      :watch [^List {seen-length .-length digit idx} !seen-digits]
       (m/AnimatedAlign
        .alignment (if (< digit 5)
                     m/Alignment.topCenter
@@ -75,7 +75,11 @@
       (m/GestureDetector
        .onTapDown (fn [_]
                     (s/HapticFeedback.lightImpact)
-                    (swap! !digits update idx #((if (< % 5) + -) % 5))))
+                    (swap! !digits
+                           (fn [^List {:flds [length] :as digits}]
+                             (update digits
+                                     (+ idx (- length seen-length))
+                                     #((if (< % 5) + -) % 5))))))
       bead))
     ; TODO hint number here
     ]))
@@ -102,16 +106,21 @@
      (map
       (fn [bead-idx]
         (f/widget
-         :get [:idx] :watch [{digit idx} !digits]
+         :get [:!seen-digits :idx]
+         :watch [^List {seen-length .-length digit idx} !seen-digits]
          (m/AnimatedSlide
           .offset (ui/Offset 0 (if (< bead-idx (mod digit 5)) -0.5 0))
           .duration bead-animation-duration
           .curve bead-animation-curve)
          (m/GestureDetector
-          .onTapDown (fn [_]
-                       (s/HapticFeedback.lightImpact)
-                       (swap! !digits update idx
-                              #(get-in lower-rod-reference [% bead-idx]))))
+          .onTapDown
+          (fn [_]
+            (s/HapticFeedback.lightImpact)
+            (swap! !digits
+                   (fn [^List {:flds [length] :as digits}]
+                     (update digits
+                             (+ idx (- length seen-length))
+                             #(get-in lower-rod-reference [% bead-idx]))))))
          bead))
       (range 4))))))
 
@@ -131,19 +140,21 @@
     [^m/BoxConstraints {:flds [maxWidth]}]
     (f/widget
      :watch [{:keys [width]} !size]
-     :bind {:seen-length (quot (- maxWidth (* 2 frame-width) 2) width)}
-     :get [:seen-length]
-     :let [_
-           (swap! !digits
-                  (fn [^List {:flds [length] :as digits}]
-                    (vec (concat (repeat (- seen-length length) 0) digits))))])
+     :let [seen-length (quot (- maxWidth (* 2 frame-width) 2) width)
+           _ (swap! !digits
+                    (fn [^List {:flds [length] :as digits}]
+                      (vec (concat (repeat (- seen-length length) 0) digits))))]
+     :bind {:!seen-digits
+            (f/$ (let [^List {:flds [length] :as digits} (f/<! !digits)]
+                   (subvec digits (- length seen-length))))})
     (f/widget
      (m/Container
       .decoration (m/BoxDecoration
                    .color m/Colors.black
                    .borderRadius (m/BorderRadius.all (m/Radius.circular 6))))
      :padding frame-width
-     :watch [^List {:flds [length]} !digits]
+     :get [:!seen-digits]
+     :watch [^List {:flds [length]} !seen-digits]
      :bind {:rod3?s (mapv #(= 0 (mod (- length %) 3)) (range length))}
      (m/Column .mainAxisSize m/MainAxisSize.min)
      .children
@@ -160,5 +171,3 @@
          .children
          (map #(f/widget :bind {:idx %} dot-beam) (range length)))
         (bead-row lower-rod)])))))
-
-

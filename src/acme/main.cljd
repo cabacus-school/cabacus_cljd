@@ -32,7 +32,7 @@
     (m/Scaffold
      .backgroundColor secondaryContainer
      .appBar (m/AppBar .backgroundColor secondaryContainer
-                       .title (m/Text "Cabacus School"))))
+                       .title (m/Text "cabacus"))))
    .body
    m/SafeArea
    m/Center
