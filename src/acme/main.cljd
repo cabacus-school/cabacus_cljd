@@ -3,7 +3,7 @@
             ["package:flutter/services.dart" :as s]
             [cljd.flutter :as f]
             [acme.state :refer [!color]]
-            [acme.abacus :refer [digit-widget]]))
+            [acme.abacus :refer [abacus]]))
 
 (defn main []
   (m/WidgetsFlutterBinding.ensureInitialized)
@@ -36,5 +36,5 @@
    .body
    m/SafeArea
    m/Center
-   digit-widget))
+   abacus))
 
