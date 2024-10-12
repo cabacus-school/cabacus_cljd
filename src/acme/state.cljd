@@ -47,4 +47,4 @@
 
 ;; DIGITS
 
-(defonce !digits (atom (vec (range 10))))
+(defonce !digits (atom nil))
