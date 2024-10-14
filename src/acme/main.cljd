@@ -1,9 +1,35 @@
 (ns acme.main
   (:require ["package:flutter/material.dart" :as m]
             ["package:flutter/services.dart" :as s]
+            ["dart:ui" :as ui]
             [cljd.flutter :as f]
-            [acme.state :refer [!color]]
+            [acme.state :refer [!color !digits]]
             [acme.abacus :refer [abacus]]))
+
+(def cabacus-button
+  (f/widget
+   (m/TextButton
+    .onPressed (fn []
+                 (s/HapticFeedback.heavyImpact)
+                 (swap! !digits (fn [^List {:flds [length]}]
+                                  (vec (repeat length 0))))))
+   :get {{{:flds [headlineMedium]} .-textTheme, {:flds [primary]} .-colorScheme}
+         m/Theme}
+   :padding {:horizontal 12}
+   :let [cabacus-word "CABACUS"
+         !letter-states (atom (vec (for [_ cabacus-word]
+                                     {:offset 0, :left false, :right false})))]
+   (m/Row .mainAxisSize m/MainAxisSize.min)
+   .children
+   (for [[idx c] (map-indexed vector cabacus-word)]
+     (f/widget
+      (f/widget
+       :animate []
+       (m/FractionalTranslation .translation (ui/Offset 0 -0.1)))
+      (m/Text c
+              .style (.copyWith headlineMedium
+                                .color primary
+                                .fontWeight m/FontWeight.bold))))))
 
 (defn main []
   (m/WidgetsFlutterBinding.ensureInitialized)
@@ -32,7 +58,7 @@
     (m/Scaffold
      .backgroundColor secondaryContainer
      .appBar (m/AppBar .backgroundColor secondaryContainer
-                       .title (m/Text "cabacus"))))
+                       .title cabacus-button)))
    .body
    m/SafeArea
    m/Center

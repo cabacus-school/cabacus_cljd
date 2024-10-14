@@ -117,26 +117,24 @@
     (m/Column
      .mainAxisAlignment m/MainAxisAlignment.end
      .children
-     (map
-      (fn [bead-idx]
-        (f/widget
-         :get [:!seen-digits :idx]
-         :watch [^List {seen-length .-length, digit idx} !seen-digits]
-         (m/AnimatedSlide
-          .offset (ui/Offset 0 (if (< bead-idx (mod digit 5)) -0.5 0))
-          .duration bead-animation-duration
-          .curve bead-animation-curve)
-         (m/GestureDetector
-          .onTapDown
-          (fn [_]
-            (s/HapticFeedback.lightImpact)
-            (swap! !digits
-                   (fn [^List {:flds [length] :as digits}]
-                     (update digits
-                             (+ idx (- length seen-length))
-                             #(get-in lower-rod-reference [% bead-idx]))))))
-         bead))
-      (range 4))))))
+     (for [bead-idx (range 4)]
+       (f/widget
+        :get [:!seen-digits :idx]
+        :watch [^List {seen-length .-length, digit idx} !seen-digits]
+        (m/AnimatedSlide
+         .offset (ui/Offset 0 (if (< bead-idx (mod digit 5)) -0.5 0))
+         .duration bead-animation-duration
+         .curve bead-animation-curve)
+        (m/GestureDetector
+         .onTapDown
+         (fn [_]
+           (s/HapticFeedback.lightImpact)
+           (swap! !digits
+                  (fn [^List {:flds [length] :as digits}]
+                    (update digits
+                            (+ idx (- length seen-length))
+                            #(get-in lower-rod-reference [% bead-idx]))))))
+        bead))))))
 
 (def dot-beam
   (f/widget
@@ -177,11 +175,13 @@
                 (m/ClipRRect .borderRadius (m/BorderRadius.circular 3))
                 (m/Row .mainAxisSize m/MainAxisSize.min)
                 .children
-                (map #(f/widget :bind {:idx %} widget) (range length))))]
+                (for [idx (range length)]
+                  (f/widget :bind {:idx idx} widget))))]
        [(bead-row upper-rod)
         (f/widget
          :height frame-width
          (m/Row .mainAxisSize m/MainAxisSize.min)
          .children
-         (map #(f/widget :bind {:idx %} dot-beam) (range length)))
+         (for [idx (range length)]
+           (f/widget :bind {:idx idx} dot-beam)))
         (bead-row lower-rod)])))))
