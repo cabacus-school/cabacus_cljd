@@ -14,7 +14,7 @@
 
 (def cabacus-button
   (f/widget
-   :let [jump-letter-duration (dc/Duration .milliseconds 75)
+   :let [jump-letter-duration (Duration .milliseconds 75)
          jump-letters
          (fn [letters]
            (-> (async/Stream.periodic jump-letter-duration
@@ -49,16 +49,17 @@
                  (swap! !digits (fn [^List {:flds [length]}]
                                   (vec (repeat length 0))))))
    :padding {:horizontal 12}
-   :get {{{:flds [headlineMedium]} .-textTheme, {:flds [primary]} .-colorScheme}
-         m/Theme}
    (m/Row .mainAxisSize m/MainAxisSize.min)
    .children
    (for [{:keys [letter controller]} letters]
      (f/widget
-      (m/SlideTransition .position (.drive ^m/AnimationController controller
-                                           (.chain (m/Tween .begin ui/Offset.zero
-                                                            .end (ui/Offset 0 -0.1))
-                                                   (m/CurveTween .curve m/Curves.easeOutQuad))))
+      (m/SlideTransition
+       .position (.drive ^m/AnimationController controller
+                         (.chain (m/Tween .begin ui/Offset.zero
+                                          .end (ui/Offset 0 -0.1))
+                                 (m/CurveTween .curve m/Curves.easeOutQuad))))
+      :get {{{:flds [headlineMedium]} .-textTheme
+             {:flds [primary]} .-colorScheme} m/Theme}
       (m/Text letter
               .style (.copyWith headlineMedium
                                 .color primary
