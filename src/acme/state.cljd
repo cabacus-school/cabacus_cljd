@@ -1,6 +1,11 @@
 (ns acme.state
   (:require ["package:flutter/material.dart" :as m]
             [cljd.flutter :as f]))
+;; FONTS
+
+(def numeric-font "CourierPrimeSans")
+(def default-font "Montserrat")
+(def cabacus-font "Gaegu")
 
 ;; COLORS
 

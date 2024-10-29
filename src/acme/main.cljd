@@ -5,65 +5,64 @@
             ["dart:core" :as dc]
             ["dart:async" :as async]
             [cljd.flutter :as f]
-            [acme.state :refer [!color !digits]]
+            [acme.state :refer [!color !digits cabacus-font]]
             [acme.abacus :refer [abacus]]))
 
-; TODO test this macro
 (defmacro await-duration [& exprs]
-  `(await (async/Future.delayed (dc/Duration ~@exprs))))
+  `(await (async/Future.delayed (dart:core/Duration ~@exprs))))
 
 (def cabacus-button
-  (f/widget
-   :let [jump-letter-duration (Duration .milliseconds 75)
-         jump-letters
-         (fn [letters]
-           (-> (async/Stream.periodic jump-letter-duration
-                                      #(get-in letters [% :controller]))
-               (.take (.-length ^List letters))
-               (.forEach #(do (await (.forward ^m/AnimationController %))
-                              (.reverse ^m/AnimationController %)))))]
-   :vsync vsync
-   :let [!disposed? (atom false)]
-   :managed [letters (doto
-                      (vec (for [c "CABACUS"]
-                             {:letter c
-                              :controller (m/AnimationController
-                                           .duration jump-letter-duration
-                                           .vsync vsync)}))
-                       (as->
-                        letters
-                        (future
-                          (let [reversed-letters (vec (reverse letters))]
-                            (doseq [interval (repeatedly #(+ 45 (rand-int 31)))
-                                    :while (not @!disposed?)]
-                              (await (async/Future.delayed
-                                      (dc/Duration .seconds interval)))
-                              (jump-letters reversed-letters))))))
-             :dispose (#(do (reset! !disposed? true)
-                            (doseq [{:keys [controller]} %]
-                              (.dispose ^m/AnimationController controller))))]
-   (m/TextButton
-    .onPressed (fn []
-                 (jump-letters letters)
-                 (s/HapticFeedback.heavyImpact)
-                 (swap! !digits (fn [^List {:flds [length]}]
-                                  (vec (repeat length 0))))))
-   :padding {:horizontal 12}
-   (m/Row .mainAxisSize m/MainAxisSize.min)
-   .children
-   (for [{:keys [letter controller]} letters]
-     (f/widget
-      (m/SlideTransition
-       .position (.drive ^m/AnimationController controller
-                         (.chain (m/Tween .begin ui/Offset.zero
-                                          .end (ui/Offset 0 -0.1))
-                                 (m/CurveTween .curve m/Curves.easeOutQuad))))
-      :get {{{:flds [headlineMedium]} .-textTheme
-             {:flds [primary]} .-colorScheme} m/Theme}
-      (m/Text letter
-              .style (.copyWith headlineMedium
-                                .color primary
-                                .fontWeight m/FontWeight.bold))))))
+  (let [!disposed? (atom false)]
+    (f/widget
+     :let [jump-letter-duration (Duration .milliseconds 75)
+           jump-letters
+           (fn [letters]
+             (-> (async/Stream.periodic jump-letter-duration
+                                        #(get-in letters [% :controller]))
+                 (.take (.-length ^List letters))
+                 (.forEach #(do (await (.forward ^m/AnimationController %))
+                                (.reverse ^m/AnimationController %)))))]
+     :vsync vsync
+     :managed [letters
+               (doto
+                (vec (for [c "CABACUS"]
+                       {:letter c
+                        :controller (m/AnimationController
+                                     .duration jump-letter-duration
+                                     .vsync vsync)}))
+                 (as-> letters
+                       (future
+                         (let [reversed-letters (vec (reverse letters))]
+                           (doseq [interval (repeatedly #(+ 45 (rand-int 31)))
+                                   :while (not @!disposed?)]
+                             (await-duration .seconds interval)
+                             (jump-letters reversed-letters))))))
+               :dispose (#(do (reset! !disposed? true)
+                              (doseq [{:keys [controller]} %]
+                                (.dispose ^m/AnimationController controller))))]
+     (m/TextButton
+      .onPressed (fn []
+                   (jump-letters letters)
+                   (s/HapticFeedback.heavyImpact)
+                   (swap! !digits (fn [^List {:flds [length]}]
+                                    (vec (repeat length 0))))))
+     :padding {:horizontal 12}
+     (m/Row .mainAxisSize m/MainAxisSize.min)
+     .children
+     (for [{:keys [letter controller]} letters]
+       (f/widget
+        (m/SlideTransition
+         .position (.drive ^m/AnimationController controller
+                           (.chain (m/Tween .begin ui/Offset.zero
+                                            .end (ui/Offset 0 -0.1))
+                                   (m/CurveTween .curve m/Curves.easeOutQuad))))
+        :get {{{:flds [headlineMedium]} .-textTheme
+               {:flds [primary]} .-colorScheme} m/Theme}
+        (m/Text letter
+                .style (.copyWith headlineMedium
+                                  .color primary
+                                  .fontWeight m/FontWeight.bold
+                                  .fontFamily cabacus-font)))))))
 
 (defn main []
   (m/WidgetsFlutterBinding.ensureInitialized)
@@ -92,7 +91,8 @@
     (m/Scaffold
      .backgroundColor secondaryContainer
      .appBar (m/AppBar .backgroundColor secondaryContainer
-                       .title cabacus-button)))
+                       .title cabacus-button
+                       .titleSpacing 0)))
    .body
    m/SafeArea
    m/Center

@@ -35,6 +35,7 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  audioplayers: ^6.1.0
 
 dev_dependencies:
   flutter_test:
@@ -88,3 +89,18 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+  fonts:
+    - family: Gaegu
+      fonts:
+        - asset: assets/fonts/Gaegu/Gaegu-Bold.ttf
+          weight: 700
+    - family: CourierPrimeSans
+      fonts:
+        - asset: assets/fonts/CourierPrimeSans/CourierPrimeSans.ttf
+        - asset: assets/fonts/CourierPrimeSans/CourierPrimeSansBold.ttf
+          weight: 700
+    - family: Montserrat
+      fonts:
+        - asset: assets/fonts/Montserrat/static/Montserrat-Regular.ttf
+        - asset: assets/fonts/Montserrat/static/Montserrat-Italic.ttf
+          style: italic
