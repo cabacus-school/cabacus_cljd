@@ -131,13 +131,11 @@
          (fn [_]
            (s/HapticFeedback.lightImpact)
            (swap! state/!digits-info
-                  (fn [{^List {:flds [length] :as digits} :digits :as digits-info}]
+                  (fn [{^List {:flds [length]} :digits :as digits-info}]
                     (let [last-index-change (+ idx (- length seen-length))]
-                      (assoc digits-info
-                             :last-index-change last-index-change
-                             :digits (update digits
-                                             last-index-change
-                                             #(get-in lower-rod-reference [% bead-idx]))))))))
+                      (-> (assoc digits-info :last-index-change last-index-change)
+                          (update-in [:digits last-index-change]
+                                     #(get-in lower-rod-reference [% bead-idx]))))))))
         bead))))))
 
 (def dot-beam
