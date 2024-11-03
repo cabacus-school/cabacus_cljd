@@ -1,6 +1,7 @@
 (ns acme.state
   (:require ["package:flutter/material.dart" :as m]
-            [cljd.flutter :as f]))
+            [cljd.flutter :as f]
+            [acme.audio :as audio]))
 ;; FONTS
 
 (def numeric-font "CourierPrimeSans")
@@ -52,6 +53,32 @@
 
 ;; DIGITS
 
-(defonce !digits (atom nil))
+(defonce !digits
+  (add-watch
+   (atom [])
+   :!digits
+   (fn [_ _ old new]
+     (when (= (count old) (count new))
+       (let [changed-index (count (take-while true? (map = old new)))]
+         (when (< changed-index (count new))
+           (let [old-digit (get old changed-index)
+                 new-digit (get new changed-index)
+                 top-changed (not= (quot old-digit 5) (quot new-digit 5))
+                 bottom-changed (not= (mod old-digit 5) (mod new-digit 5))]
+             (audio/play-bead-async (+ (if top-changed 1 0)
+                                       (if bottom-changed 1 0))))))))))
+
+(defonce !seen-length
+  (add-watch (atom 0)
+             :!seen-length
+             (fn [_ _ old-length new-length]
+               (when (not= old-length new-length)
+                 (swap! !digits
+                        (fn [^List {:flds [length] :as digits}]
+                          (vec (concat (repeat (- new-length length) 0)
+                                       digits))))))))
+
+(def !seen-digits (f/$ (let [^List {:flds [length] :as digits} (f/<! !digits)]
+                         (subvec digits (- length (f/<! !seen-length))))))
 
 (defonce !num-hint? (atom true))

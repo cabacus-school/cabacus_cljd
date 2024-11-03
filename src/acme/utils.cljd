@@ -1,0 +1,4 @@
+(ns acme.utils)
+
+(defmacro await-duration [& duration-args]
+  `(await (async/Future.delayed (dart:core/Duration ~@duration-args))))

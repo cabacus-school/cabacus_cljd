@@ -2,14 +2,12 @@
   (:require ["package:flutter/material.dart" :as m]
             ["package:flutter/services.dart" :as s]
             ["dart:ui" :as ui]
-            ["dart:core" :as dc]
             ["dart:async" :as async]
             [cljd.flutter :as f]
             [acme.state :refer [!color !digits cabacus-font]]
-            [acme.abacus :refer [abacus]]))
-
-(defmacro await-duration [& exprs]
-  `(await (async/Future.delayed (dart:core/Duration ~@exprs))))
+            [acme.abacus :refer [abacus]]
+            [acme.audio :as audio]
+            [acme.utils :as utils]))
 
 (def cabacus-button
   (let [!disposed? (atom false)]
@@ -35,7 +33,7 @@
                          (let [reversed-letters (vec (reverse letters))]
                            (doseq [interval (repeatedly #(+ 45 (rand-int 31)))
                                    :while (not @!disposed?)]
-                             (await-duration .seconds interval)
+                             (utils/await-duration .seconds interval)
                              (jump-letters reversed-letters))))))
                :dispose (#(do (reset! !disposed? true)
                               (doseq [{:keys [controller]} %]
@@ -44,8 +42,10 @@
       .onPressed (fn []
                    (jump-letters letters)
                    (s/HapticFeedback.heavyImpact)
-                   (swap! !digits (fn [^List {:flds [length]}]
-                                    (vec (repeat length 0))))))
+                   (doseq [[i d] (map-indexed list @!digits) :when (pos-int? d)]
+                     (swap! !digits assoc i 0)
+                     (utils/await-duration .milliseconds 20))
+                   nil))
      :padding {:horizontal 12}
      (m/Row .mainAxisSize m/MainAxisSize.min)
      .children
@@ -71,6 +71,7 @@
   (s/SystemChrome.setSystemUIOverlayStyle
    (s/SystemUiOverlayStyle .systemNavigationBarColor m/Colors.transparent))
   (s/SystemChrome.setEnabledSystemUIMode s/SystemUiMode.immersiveSticky)
+  (audio/preload-bead-audio)
   (f/run
    (f/widget
     :watch [{^m/ColorScheme {:flds [primary] :as color-scheme} :color-scheme}

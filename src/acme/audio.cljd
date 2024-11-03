@@ -1,0 +1,29 @@
+(ns acme.audio
+  (:require ["package:audioplayers/audioplayers.dart" :as ap]
+            ["dart:async" :as async]
+            [acme.utils :as utils]))
+
+(def ^:private num-tracks 17)
+
+(def ^:private audioplayers
+  (mapv #(doto (ap/AudioPlayer)
+           (.setPlayerMode ap/PlayerMode.lowLatency)
+           (.setReleaseMode ap/ReleaseMode.stop)
+           (.setVolume 0.5)
+           (.setSource (ap/AssetSource (str "sound/bead-" % ".wav"))))
+        (shuffle (range num-tracks))))
+
+(defn preload-bead-audio []
+  (async/Future.wait (for [ap audioplayers] (.stop ^ap/AudioPlayer ap))))
+
+(def ^:private !audioplayers (atom (cycle audioplayers)))
+
+(defn play-bead-async
+  "Play the bead sound `n` times."
+  [n]
+  (future
+    (doseq [ap (take n (first (swap-vals! !audioplayers (partial drop n))))]
+      (.then (.stop ^ap/AudioPlayer ap)
+             (fn [_] (.resume ^ap/AudioPlayer ap)))
+      (utils/await-duration .milliseconds 10))))
+
