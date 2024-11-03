@@ -60,7 +60,7 @@
   (f/widget
    (f/widget
     :watch [{:keys [width height]} state/!size] :width width :height (* 1.5 height))
-   :get [ :idx]
+   :get [:idx :!seen-digits]
    :watch [num-hint? state/!num-hint?]
    (m/Stack .alignment m/Alignment.center)
    .children
@@ -68,27 +68,28 @@
     nil?
     [(rod
       (f/widget
-       :watch [{digit idx} state/!seen-digits]
+       :watch [{digit idx} !seen-digits]
        (m/AnimatedAlign
         .alignment (if (< digit 5)
                      m/Alignment.topCenter
                      m/Alignment.bottomCenter)
         .duration bead-animation-duration
         .curve bead-animation-curve)
-       :watch [^List {seen-length .-length} state/!seen-digits]
+       :watch [^List {seen-length .-length} !seen-digits]
        (m/GestureDetector
-        .onTapDown (fn [_]
-                     (s/HapticFeedback.lightImpact)
-                     (swap! state/!digits
-                            (fn [^List {:flds [length] :as digits}]
-                              (update digits
-                                      (+ idx (- length seen-length))
-                                      #((if (< % 5) + -) % 5))))))
+        .onTapDown
+        (fn [_]
+          (s/HapticFeedback.lightImpact)
+          (swap! state/!digits-info
+                 (fn [{^List {:flds [length]} :digits :as digits-info}]
+                   (let [last-index-change (+ idx (- length seen-length))]
+                     (-> (assoc digits-info :last-index-change last-index-change)
+                         (update-in [:digits last-index-change] #((if (< % 5) + -) % 5))))))))
        bead))
      (when num-hint?
        (f/widget
         m/IgnorePointer
-        :watch [{digit idx} state/!seen-digits]
+        :watch [{digit idx} !seen-digits]
         :get {{{:flds [bodyLarge]} .-textTheme} m/Theme}
         (m/Text
          (str digit)
@@ -119,8 +120,8 @@
      .children
      (for [bead-idx (range 4)]
        (f/widget
-        :get [ :idx]
-        :watch [^List {seen-length .-length, digit idx} state/!seen-digits]
+        :get [:idx :!seen-digits]
+        :watch [^List {seen-length .-length, digit idx} !seen-digits]
         (m/AnimatedSlide
          .offset (ui/Offset 0 (if (< bead-idx (mod digit 5)) -0.5 0))
          .duration bead-animation-duration
@@ -129,11 +130,14 @@
          .onTapDown
          (fn [_]
            (s/HapticFeedback.lightImpact)
-           (swap! state/!digits
-                  (fn [^List {:flds [length] :as digits}]
-                    (update digits
-                            (+ idx (- length seen-length))
-                            #(get-in lower-rod-reference [% bead-idx]))))))
+           (swap! state/!digits-info
+                  (fn [{^List {:flds [length] :as digits} :digits :as digits-info}]
+                    (let [last-index-change (+ idx (- length seen-length))]
+                      (assoc digits-info
+                             :last-index-change last-index-change
+                             :digits (update digits
+                                             last-index-change
+                                             #(get-in lower-rod-reference [% bead-idx]))))))))
         bead))))))
 
 (def dot-beam
@@ -152,15 +156,21 @@
     [^m/BoxConstraints {:flds [maxWidth]}]
     (f/widget
      :watch [{:keys [width]} state/!size]
-     :let [_ (reset! state/!seen-length
-                     (quot (- maxWidth (* 2 state/frame-width) 2) width))])
+     :let [seen-length (quot (- maxWidth (* 2 state/frame-width) 2) width)
+           _ (swap! state/!digits-info update :digits
+                    (fn [^List {:flds [length] :as digits}]
+                      (vec (concat (repeat (- seen-length length) 0)
+                                   digits))))]
+     :bind {:!seen-digits (f/$ (let [{^List {:flds [length] :as digits} :digits} (f/<! state/!digits-info)]
+                                 (subvec digits (- length seen-length))))})
     (f/widget
      (m/Container
       .decoration (m/BoxDecoration
                    .color m/Colors.black
                    .borderRadius (m/BorderRadius.all (m/Radius.circular 6))))
      :padding state/frame-width
-     :watch [^List {:flds [length]} state/!seen-digits]
+     :get [:!seen-digits]
+     :watch [^List {:flds [length]} !seen-digits]
      :bind {:rod3?s (mapv #(= 0 (mod (- length %) 3)) (range length))}
      (m/Column .mainAxisSize m/MainAxisSize.min)
      .children

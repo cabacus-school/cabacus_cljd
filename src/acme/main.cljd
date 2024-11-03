@@ -4,7 +4,7 @@
             ["dart:ui" :as ui]
             ["dart:async" :as async]
             [cljd.flutter :as f]
-            [acme.state :refer [!color !digits cabacus-font]]
+            [acme.state :as state :refer [!color cabacus-font]]
             [acme.abacus :refer [abacus]]
             [acme.audio :as audio]
             [acme.utils :as utils]))
@@ -42,8 +42,10 @@
       .onPressed (fn []
                    (jump-letters letters)
                    (s/HapticFeedback.heavyImpact)
-                   (doseq [[i d] (map-indexed list @!digits) :when (pos-int? d)]
-                     (swap! !digits assoc i 0)
+                   (doseq [[i d] (map-indexed list (:digits @state/!digits-info)) :when (pos-int? d)]
+                     (swap! state/!digits-info
+                            #(->  (assoc % :last-index-change i)
+                                  (assoc-in [:digits i] 0)))
                      (utils/await-duration .milliseconds 20))
                    nil))
      :padding {:horizontal 12}
