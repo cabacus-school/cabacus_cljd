@@ -1,0 +1,24 @@
+(ns acme.settings
+  (:require
+   ["package:flutter/material.dart" :as m]
+   [acme.abacus :as abacus]
+   [cljd.flutter :as f]))
+
+(def settings-button
+  (f/widget
+   :context ctx
+   (m/IconButton .icon (m/Icon m/Icons.settings))
+   .onPressed
+   (fn []
+     (m/showDialog
+      .context ctx
+      .builder (f/build []
+                        m/AlertDialog
+                        .content
+                        (m/SizedBox .width 500)
+                        (m/Scrollbar .thumbVisibility true)
+                        :padding {:horizontal 12}
+                        (m/ListView .primary true
+                                    .shrinkWrap true)
+                        .children
+                        [abacus/bead])))))

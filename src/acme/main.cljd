@@ -1,13 +1,15 @@
 (ns acme.main
-  (:require ["package:flutter/material.dart" :as m]
-            ["package:flutter/services.dart" :as s]
-            ["dart:ui" :as ui]
-            ["dart:async" :as async]
-            [cljd.flutter :as f]
-            [acme.state :as state :refer [!color cabacus-font]]
-            [acme.abacus :refer [abacus]]
-            [acme.audio :as audio]
-            [acme.utils :as utils]))
+  (:require
+   ["dart:async" :as async]
+   ["dart:ui" :as ui]
+   ["package:flutter/material.dart" :as m]
+   ["package:flutter/services.dart" :as s]
+   [acme.abacus :as abacus]
+   [acme.audio :as audio]
+   [acme.settings :as settings]
+   [acme.state :as state :refer [!color cabacus-font]]
+   [acme.utils :as utils]
+   [cljd.flutter :as f]))
 
 (def cabacus-button
   (let [!disposed? (atom false)]
@@ -95,9 +97,10 @@
      .backgroundColor secondaryContainer
      .appBar (m/AppBar .backgroundColor secondaryContainer
                        .title cabacus-button
-                       .titleSpacing 0)))
+                       .titleSpacing 0
+                       .actions [settings/settings-button])))
    .body
    m/SafeArea
    m/Center
-   abacus))
+   abacus/abacus))
 
