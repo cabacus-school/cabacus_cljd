@@ -11,16 +11,15 @@
 ;; COLORS
 
 (def colors
-  (update-vals
-   {:amber m.Colors/amber
-    :blue-grey m.Colors/blueGrey
-    :grey m.Colors/grey
-    :light-blue-accent m.Colors/lightBlueAccent
-    :purple-accent m.Colors/purpleAccent
-    :light-green m.Colors/lightGreen}
-   (fn [seed-color]
-     {:seed-color seed-color
-      :color-scheme (m/ColorScheme.fromSeed .seedColor seed-color)})))
+  (-> {:amber m.Colors/amber
+       :blue-grey m.Colors/blueGrey
+       :grey m.Colors/grey
+       :light-blue-accent m.Colors/lightBlueAccent
+       :purple-accent m.Colors/purpleAccent
+       :light-green m.Colors/lightGreen}
+      (update-vals
+       (fn [seed-color]
+         {:seed-color seed-color :color-scheme (m/ColorScheme.fromSeed .seedColor seed-color)}))))
 
 (defonce !color-key (atom :amber))
 
@@ -54,19 +53,19 @@
 ;; DIGITS
 
 (defonce !digits-info
-  (add-watch
-   (atom {:last-index-change nil
-          :digits []})
-   :play-bead-sounds
-   (fn [_ !digits-info {old-digits :digits}
-        {:keys [last-index-change] new-digits :digits}]
-     (when last-index-change
-       (swap! !digits-info assoc :last-index-change nil)
-       (let [old-digit (get old-digits last-index-change)
-             new-digit (get new-digits last-index-change)
-             top-changed (not= (quot old-digit 5) (quot new-digit 5))
-             bottom-changed (not= (mod old-digit 5) (mod new-digit 5))]
-         (audio/play-bead-async (+ (if top-changed 1 0)
-                                   (if bottom-changed 1 0))))))))
+  (-> (atom {:last-index-change nil
+             :digits []})
+      (add-watch
+       :play-bead-sounds
+       (fn [_ !digits-info {old-digits :digits}
+            {:keys [last-index-change] new-digits :digits}]
+         (when last-index-change
+           (swap! !digits-info assoc :last-index-change nil)
+           (let [old-digit (get old-digits last-index-change)
+                 new-digit (get new-digits last-index-change)
+                 top-changed (not= (quot old-digit 5) (quot new-digit 5))
+                 bottom-changed (not= (mod old-digit 5) (mod new-digit 5))]
+             (audio/play-bead-async (+ (if top-changed 1 0)
+                                       (if bottom-changed 1 0)))))))))
 
 (defonce !num-hint? (atom true))
