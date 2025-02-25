@@ -1,8 +1,197 @@
 (ns acme.settings
   (:require
    ["package:flutter/material.dart" :as m]
+   ["package:package_info_plus/package_info_plus.dart" :as package-info]
    [acme.abacus :as abacus]
+   [acme.state :as state]
    [cljd.flutter :as f]))
+
+(def initial-settings {:bead-size :large
+                       :bead-style :wide
+                       :cabacus-side :left
+                       :speed :slow
+                       :vibration true
+                       :sound true
+                       :digits-above true
+                       :hint true})
+
+(defn ^:private my-segmented-button
+  [& {:keys [selected onSelectionChanged segments]}]
+  (f/widget
+   (m/SegmentedButton
+    .showSelectedIcon false
+    .selected selected
+    .onSelectionChanged onSelectionChanged
+    .segments segments)))
+
+(defn ^:private segment-setting
+  [& {:keys [text setting-key options segment-fn]}]
+  (f/widget
+   (m/Row .mainAxisAlignment m/MainAxisAlignment.spaceBetween)
+   .children
+   [(m/Text text)
+    (f/widget
+     :get [:settings-atom]
+     :watch [{setting setting-key} settings-atom]
+     (my-segmented-button
+      :selected #{setting}
+      :onSelectionChanged (fn [[option]]
+                            (swap! settings-atom assoc setting-key option))
+      :segments (map segment-fn options)))]))
+
+(defn ^:private switch-setting
+  [& {:keys [icon-true icon-false text setting-key]}]
+  (f/widget
+   :get [:settings-atom]
+   :watch [{setting setting-key} settings-atom]
+   (m/Row .mainAxisAlignment m/MainAxisAlignment.spaceBetween)
+   .children
+   [(m/Icon (if setting icon-true icon-false))
+    (m/SizedBox .width 10)
+    (m/Text text)
+    (m/Spacer)
+    (m/Switch .value setting
+              .onChanged #(swap! settings-atom assoc setting-key %))]))
+
+(def ^:private bead-size-setting
+  (segment-setting
+   :text "Size"
+   :setting-key :bead-size
+   :options (keys state/sizes-base)
+   :segment-fn
+   #(m/ButtonSegment
+     .value %
+     .label (f/widget
+             :get [:settings-atom]
+             :watch [{:keys [bead-style]} settings-atom
+                     {bead-color :seed-color
+                      ^m/ColorScheme {border-color .-onPrimaryContainer}
+                      :color-scheme}
+                     state/color-cell]
+             :let [{{:keys [height]} %} state/sizes-base
+                   ratio (bead-style state/bead-style-ratios)
+                   width (* ratio height)]
+             :bind {:bead-width width
+                    :bead-height height
+                    :bead-color bead-color
+                    :border-color border-color}
+             abacus/bead))))
+
+(def ^:private bead-style-setting
+  (segment-setting
+   :text "Style"
+   :setting-key :bead-style
+   :options (keys state/bead-style-ratios)
+   :segment-fn
+   #(m/ButtonSegment
+     .value %
+     .label (f/widget
+             :get [:bead-dimensions-cell]
+             :watch [{:keys [height]} bead-dimensions-cell
+                     {bead-color :seed-color
+                      ^m/ColorScheme {border-color .-onPrimaryContainer}
+                      :color-scheme}
+                     state/color-cell]
+             :let [width (* (state/bead-style-ratios %) height)]
+             :bind {:bead-width width
+                    :bead-height height
+                    :bead-color bead-color
+                    :border-color border-color}
+             abacus/bead))))
+
+(def ^:private cabacus-side-setting
+  (segment-setting
+   :text "Zero"
+   :setting-key :cabacus-side
+   :options [:left :right]
+   :segment-fn #(m/ButtonSegment
+                 .value %
+                 .icon (m/Icon
+                        (case %
+                          :left m/Icons.align_horizontal_left_rounded
+                          :right m/Icons.align_horizontal_right_rounded)))))
+(def ^:private speed-setting
+  (segment-setting
+   :text "Speed"
+   :setting-key :speed
+   :options (keys state/speeds)
+   :segment-fn #(m/ButtonSegment
+                 .value %
+                 .icon (m/Icon (case %
+                                 :slow m/Icons.play_arrow_rounded
+                                 :fast m/Icons.fast_forward_rounded
+                               ; :instant m/Icons.fast_forward_rounded
+                                 )))))
+
+(def ^:private vibration-setting
+  (switch-setting
+   :icon-true m/Icons.vibration_rounded
+   :icon-false m/Icons.crop_portrait_rounded
+   :text "Vibration"
+   :setting-key :vibration))
+
+(def ^:private sound-setting
+  (switch-setting
+   :icon-true m/Icons.volume_up_rounded
+   :icon-false m/Icons.volume_off_rounded
+   :text "Sound"
+   :setting-key :sound))
+
+(def ^:private digits-above-setting
+  (switch-setting
+   :icon-true m/Icons.onetwothree_rounded
+   :icon-false m/Icons.linear_scale
+   :text "Digits"
+   :setting-key :digits-above))
+
+(def ^:private hint-setting
+  (switch-setting
+   :icon-true m/Icons.looks_two_outlined
+   :icon-false m/Icons.crop_square_rounded
+   :text "Hints"
+   :setting-key :hint))
+
+(def ^:private cabacus-version
+  (f/widget
+   :get [:package-info]
+   :get {{{:flds [labelSmall]} .-textTheme} m/Theme}
+   (m/Text
+    (str "Cabacus " (.-version ^package-info/PackageInfo package-info))
+    .style (.copyWith labelSmall .fontStyle m/FontStyle.italic))))
+
+(def ^:private ok-button
+  (f/widget
+   :get [m/Navigator]
+   (m/FilledButton .onPressed #(.pop navigator))
+   (m/Text "OK")))
+
+(def ^:private reset-button
+  (f/widget
+   :context ctx
+   (m/OutlinedButton.icon
+    .onPressed
+    (fn []
+      (m/showDialog
+       .context ctx
+       .builder
+       (f/build
+        []
+        (m/AlertDialog .title (m/Text "Confirm reset?")
+                       .content (m/Text "All settings will be reset!"))
+        .actions
+        [(f/widget
+          :get [:settings-atom m/Navigator]
+          (m/FilledButton .onPressed (fn []
+                                       (reset! settings-atom initial-settings)
+                                       (.pop navigator)))
+          (m/Text "Reset"))
+         (f/widget
+          :get [m/Navigator]
+          (m/OutlinedButton .onPressed #(.pop navigator))
+          (m/Text "Cancel"))]))
+      nil)
+    .icon (m/Icon m/Icons.replay_circle_filled_rounded)
+    .label (m/Text "Reset"))))
 
 (def settings-button
   (f/widget
@@ -12,13 +201,48 @@
    (fn []
      (m/showDialog
       .context ctx
-      .builder (f/build []
-                        m/AlertDialog
-                        .content
-                        (m/SizedBox .width 500)
-                        (m/Scrollbar .thumbVisibility true)
-                        :padding {:horizontal 12}
-                        (m/ListView .primary true
-                                    .shrinkWrap true)
-                        .children
-                        [abacus/bead])))))
+      .builder
+      (f/build
+       []
+       m/AlertDialog
+       .content
+       (m/SizedBox .width 500)
+       (m/Scrollbar .thumbVisibility true)
+       :padding {:horizontal 12}
+       (m/ListView .primary true
+                   .shrinkWrap true)
+       .children
+       (interpose
+        (m/SizedBox .height 10)
+        [bead-size-setting
+
+         bead-style-setting
+
+         (m/Row
+          .children
+          [; left side
+           (f/widget
+            m/Expanded
+            (m/Column .mainAxisSize m/MainAxisSize.min)
+            .children
+            (interpose
+             (m/SizedBox .height 10)
+             [cabacus-side-setting vibration-setting sound-setting]))
+
+           (m/SizedBox .width 20)
+
+            ; right side
+           (f/widget
+            m/Expanded
+            (m/Column .mainAxisSize m/MainAxisSize.min)
+            .children
+            (interpose
+             (m/SizedBox .height 10)
+             [speed-setting digits-above-setting hint-setting]))])
+
+         cabacus-version
+
+         (m/Row .mainAxisAlignment m/MainAxisAlignment.spaceAround
+                .children
+                [reset-button ok-button])])))
+     nil)))

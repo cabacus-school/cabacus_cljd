@@ -2,17 +2,19 @@
   (:require ["package:flutter/material.dart" :as m]
             ["package:flutter/services.dart" :as s]
             ["dart:ui" :as ui]
-            ["dart:core" :as dc]
             [cljd.flutter :as f]
-            [acme.state :as state]))
+            [acme.state :as state]
+            [acme.audio :as audio]))
 
-(defn bead [& {:keys [width height bead-color border-color]}]
+(def bead
   (f/widget
-   :width width :height height :padding {:horizontal 2}
+   :get [:bead-width :bead-height :bead-color :border-color]
+   :width bead-width :height bead-height :padding {:horizontal 2}
    (m/Container .decoration (m/BoxDecoration))
    (f/widget
     :let [shade-color (m/Color.lerp bead-color m/Colors.black 0.07)]
-    m/Container
+    ;; WHY NO ALIAS
+    (m/Container .clipBehavior m/Clip.antiAlias)
     .decoration
     (m/ShapeDecoration
      .gradient (m/LinearGradient
@@ -23,21 +25,24 @@
     .shape
     (m/BeveledRectangleBorder
      .borderRadius (m/BorderRadius.all
-                    (m/Radius.elliptical (/ width 3) (dec (/ height 2))))
+                    (m/Radius.elliptical (/ bead-width 3)
+                                         (dec (/ bead-height 2))))
      .side (m/BorderSide .width 0.1
                          .color border-color
                          .strokeAlign m/BorderSide.strokeAlignCenter)))))
 
 (def used-bead
   (f/widget
-   :watch [{:keys [width height]} state/!size
+   :get [:bead-dimensions-cell]
+   :watch [{:keys [width height]} bead-dimensions-cell
            {bead-color :seed-color
-            {border-color .-onPrimaryContainer} :color-scheme} state/!color]
-   (bead
-    :width width
-    :height height
-    :bead-color bead-color
-    :border-color border-color)))
+            ^m/ColorScheme {border-color .-onPrimaryContainer} :color-scheme}
+           state/color-cell]
+   :bind {:bead-width width
+          :bead-height height
+          :bead-color bead-color
+          :border-color border-color}
+   bead))
 
 (defn rod [child]
   (f/widget
@@ -48,10 +53,13 @@
                   .color surfaceContainerHighest
                   .border (m/Border.all .width 0
                                         .color surfaceContainerHighest))))
-   (m/Stack .alignment m/Alignment.topCenter .clipBehavior m/Clip.antiAlias)
+   (m/Stack .alignment m/Alignment.topCenter)
    .children
    [(f/widget
-     (f/widget :watch [{:keys [rod-width]} state/!size] :width rod-width)
+     (f/widget
+      :get [:bead-dimensions-cell]
+      :watch [{:keys [rod-width]} bead-dimensions-cell]
+      :width rod-width)
      :get {{{:flds [onSurface outline]} .-colorScheme} m/Theme}
      :get [:idx :rod3?s]
      m/Container
@@ -61,49 +69,59 @@
      (.withOpacity (if (rod3?s idx) onSurface outline) 0.5))
     child]))
 
-(def bead-animation-duration (dc/Duration .milliseconds 400))
 (def bead-animation-curve m/Curves.easeOutExpo)
 
 (def upper-rod
   (f/widget
    (f/widget
-    :watch [{:keys [width height]} state/!size] :width width :height (* 1.5 height))
-   :get [:idx :!seen-digits]
-   :watch [num-hint? state/!num-hint?]
+    :get [:bead-dimensions-cell]
+    :watch [{:keys [width height]} bead-dimensions-cell]
+    :width width
+    :height (* 1.5 height))
+   :get [:idx :seen-digits-cell :settings-atom]
+   :watch [{:keys [hint]} settings-atom]
    (m/Stack .alignment m/Alignment.center)
    .children
    (remove
     nil?
     [(rod
       (f/widget
-       :watch [{digit idx} !seen-digits]
+       :get [:settings-atom]
+       :watch [{digit idx} seen-digits-cell
+               {speed-key :speed} settings-atom]
+       :let [{{:keys [bead-animation]} speed-key} state/speeds]
        (m/AnimatedAlign
         .alignment (if (< digit 5)
                      m/Alignment.topCenter
                      m/Alignment.bottomCenter)
-        .duration bead-animation-duration
+        .duration bead-animation
         .curve bead-animation-curve)
-       :watch [^List {seen-length .-length} !seen-digits]
-       (m/GestureDetector
-        .onTapDown
-        (fn [_]
-          (s/HapticFeedback.lightImpact)
-          (swap! state/!digits-info
-                 (fn [{^List {:flds [length]} :digits :as digits-info}]
-                   (let [last-index-change (+ idx (- length seen-length))]
-                     (-> (assoc digits-info :last-index-change last-index-change)
-                         (update-in [:digits last-index-change] #((if (< % 5) + -) % 5))))))))
-       used-bead))
-     (when num-hint?
+       (f/widget
+        :get [:settings-atom :digits-atom]
+        :watch [^List {seen-length .-length} seen-digits-cell
+                {:keys [speed vibration sound]} settings-atom]
+        (m/GestureDetector
+         .onTapDown
+         (fn [_]
+           (when vibration (s/HapticFeedback.lightImpact))
+           (swap! digits-atom update :all
+                  (fn [^List {:flds [length] :as digits}]
+                    (when sound
+                      (-> (get-in state/speeds [speed :bead-sound-interval])
+                          audio/play-bead-sound))
+                    (let [raw-idx (+ idx (- length seen-length))]
+                      (update digits raw-idx #((if (< % 5) + -) % 5)))))))
+        used-bead)))
+     (when hint
        (f/widget
         m/IgnorePointer
-        :watch [{digit idx} !seen-digits]
+        :watch [{digit idx} seen-digits-cell]
         :get {{{:flds [bodyLarge]} .-textTheme} m/Theme}
         (m/Text
          (str digit)
          .style (.copyWith bodyLarge
-                        ; .fontFamily ; TODO define this
-                           .color m/Colors.black
+                           .fontFamily state/numeric-font
+                           ; .color m/Colors.black
                            .shadows [(m/Shadow .color m/Colors.white
                                                .blurRadius 10)]))))])))
 
@@ -120,35 +138,45 @@
 
 (def lower-rod
   (f/widget
-   (f/widget :watch [{:keys [width height]} state/!size]
-             :width width :height (* 4.5 height))
+   (f/widget
+    :get [:bead-dimensions-cell]
+    :watch [{:keys [width height]} bead-dimensions-cell]
+    :width width :height (* 4.5 height))
    (rod
     (m/Column
      .mainAxisAlignment m/MainAxisAlignment.end
      .children
      (for [bead-idx (range 4)]
        (f/widget
-        :get [:idx :!seen-digits]
-        :watch [^List {seen-length .-length, digit idx} !seen-digits]
+        :get [:idx :seen-digits-cell :settings-atom :digits-atom]
+        :watch [^List {seen-length .-length, digit idx} seen-digits-cell
+                {:keys [speed vibration sound]} settings-atom]
+        :let [{{:keys [bead-animation]} speed} state/speeds]
         (m/AnimatedSlide
          .offset (ui/Offset 0 (if (< bead-idx (mod digit 5)) -0.5 0))
-         .duration bead-animation-duration
+         .duration bead-animation
          .curve bead-animation-curve)
         (m/GestureDetector
          .onTapDown
          (fn [_]
-           (s/HapticFeedback.lightImpact)
-           (swap! state/!digits-info
-                  (fn [{^List {:flds [length]} :digits :as digits-info}]
-                    (let [last-index-change (+ idx (- length seen-length))]
-                      (-> (assoc digits-info :last-index-change last-index-change)
-                          (update-in [:digits last-index-change]
-                                     #(get-in lower-rod-reference [% bead-idx]))))))))
+           (when vibration (s/HapticFeedback.lightImpact))
+           (swap! digits-atom update :all
+                  (fn [^List {:flds [length] :as digits}]
+                    (when sound
+                      (-> (get-in state/speeds [speed :bead-sound-interval])
+                          audio/play-bead-sound))
+                    (let [raw-idx (+ idx (- length seen-length))]
+                      (update digits
+                              raw-idx
+                              #(get-in lower-rod-reference [% bead-idx])))))))
         used-bead))))))
 
 (def dot-beam
   (f/widget
-   (f/widget :watch [{:keys [width]} state/!size] :width width)
+   (f/widget
+    :get [:bead-dimensions-cell]
+    :watch [{:keys [width]} bead-dimensions-cell]
+    :width width)
    :get [:idx :rod3?s] :when (rod3?s idx)
    m/Center
    (m/Container .width 3 .height 3)
@@ -161,22 +189,28 @@
    (f/build
     [^m/BoxConstraints {:flds [maxWidth]}]
     (f/widget
-     :watch [{:keys [width]} state/!size]
-     :let [seen-length (quot (- maxWidth (* 2 state/frame-width) 2) width)
-           _ (swap! state/!digits-info update :digits
-                    (fn [^List {:flds [length] :as digits}]
-                      (vec (concat (repeat (- seen-length length) 0)
-                                   digits))))]
-     :bind {:!seen-digits (f/$ (let [{^List {:flds [length] :as digits} :digits} (f/<! state/!digits-info)]
-                                 (subvec digits (- length seen-length))))})
+     :get [:bead-dimensions-cell :digits-atom]
+     :watch [{:keys [width]} bead-dimensions-cell]
+     :let [_
+           ; update number of view digits after the widget tree has been built
+           (m/WidgetsBinding.instance.addPostFrameCallback
+            (fn [_]
+              (swap!
+               digits-atom
+               (fn [{:keys [all]}]
+                 (let [view (quot (- maxWidth (* 2 state/frame-width) 2) width)
+                       length (count all)
+                       all (vec (concat (repeat (- view length) 0) all))]
+                   {:all all
+                    :view view})))))])
     (f/widget
      (m/Container
       .decoration (m/BoxDecoration
                    .color m/Colors.black
                    .borderRadius (m/BorderRadius.all (m/Radius.circular 6))))
      :padding state/frame-width
-     :get [:!seen-digits]
-     :watch [^List {:flds [length]} !seen-digits]
+     :get [:seen-digits-cell]
+     :watch [^List {:flds [length]} seen-digits-cell]
      :bind {:rod3?s (mapv #(= 0 (mod (- length %) 3)) (range length))}
      (m/Column .mainAxisSize m/MainAxisSize.min)
      .children

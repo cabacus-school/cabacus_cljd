@@ -1,77 +1,19 @@
 (ns acme.main
   (:require
-   ["dart:async" :as async]
-   ["dart:core" :as core]
-   ["dart:ui" :as ui]
    ["package:flutter/material.dart" :as m]
    ["package:flutter/services.dart" :as s]
+   ["package:package_info_plus/package_info_plus.dart" :as package-info]
    [acme.abacus :as abacus]
+   [acme.above-abacus :as above-abacus]
    [acme.audio :as audio]
    [acme.settings :as settings]
-   [acme.state :as state :refer [!color cabacus-font]]
-   [acme.utils :as utils]
+   [acme.state :as state]
    [cljd.flutter :as f]))
 
-(def cabacus-button
-  (f/widget
-   :let [jump-letter-duration (Duration .milliseconds 75)
-         jump-letters
-         (fn [letters]
-           (-> (async/Stream.periodic jump-letter-duration
-                                      #(get-in letters [% :controller]))
-               (.take (.-length ^List letters))
-               (.forEach #(do (await (.forward ^m/AnimationController %))
-                              (.reverse ^m/AnimationController %)))))]
-   :vsync vsync
-   :watch [_ (atom true)] ; to make hot reload dispose managed resources
-   :managed [jump-reverse-stream-controller (async/StreamController) :dispose .close
-             letters
-             (let [letters (vec
-                            (for [c "CABACUS"]
-                              {:letter c
-                               :controller (m/AnimationController
-                                            .duration jump-letter-duration
-                                            .vsync vsync)}))
-                   reversed-letters (vec (reverse letters))]
-               (-> jump-reverse-stream-controller
-                   .-stream
-                   (.listen (fn [_]
-                              (utils/await-duration .seconds (+ 45 (rand-int 31)))
-                              (jump-letters reversed-letters)
-                              (.add jump-reverse-stream-controller nil))))
-               (.add jump-reverse-stream-controller nil)
-               letters)
-             :dispose (#(doseq [{:keys [controller]} %]
-                          (.dispose ^m/AnimationController controller)))]
-   (m/TextButton
-    .onPressed (fn []
-                 (jump-letters letters)
-                 (s/HapticFeedback.heavyImpact)
-                 (doseq [[i d] (map-indexed list (:digits @state/!digits-info)) :when (pos-int? d)]
-                   (swap! state/!digits-info
-                          #(->  (assoc % :last-index-change i)
-                                (assoc-in [:digits i] 0)))
-                   (utils/await-duration .milliseconds 20))
-                 nil))
-   :padding {:horizontal 12}
-   (m/Row .mainAxisSize m/MainAxisSize.min)
-   .children
-   (for [{:keys [letter controller]} letters]
-     (f/widget
-      (m/SlideTransition
-       .position
-       (-> ^m/AnimationController controller
-           (.drive
-            (.chain (m/Tween .begin ui/Offset.zero
-                             .end (ui/Offset 0 -0.1))
-                    (m/CurveTween .curve m/Curves.easeOutQuad)))))
-      :get {{{:flds [headlineMedium]} .-textTheme
-             {:flds [primary]} .-colorScheme} m/Theme}
-      (m/Text letter
-              .style (-> headlineMedium
-                         (.copyWith .color primary
-                                    .fontWeight m/FontWeight.bold
-                                    .fontFamily cabacus-font)))))))
+(defmacro resolve-with [type states value]
+  `(^{:type-params [~type]} .resolveWith
+    m/WidgetStateProperty
+    #(when (.containsAll ^Set % ~states) ~value)))
 
 (defn main []
   (m/WidgetsFlutterBinding.ensureInitialized)
@@ -80,33 +22,67 @@
   (s/SystemChrome.setSystemUIOverlayStyle
    (s/SystemUiOverlayStyle .systemNavigationBarColor m/Colors.transparent))
   (s/SystemChrome.setEnabledSystemUIMode s/SystemUiMode.immersiveSticky)
-  (audio/preload-bead-audio)
-  (f/run
-   (f/widget
-    :watch [{^m/ColorScheme {:flds [primary] :as color-scheme} :color-scheme}
-            !color]
-    (m/MaterialApp
-     .title "Cabacus School"
-     ; disable overscroll effects
-     .scrollBehavior (.copyWith (m/ScrollBehavior) .overscroll false .scrollbars true)
-     .theme (m/ThemeData
-             .colorScheme color-scheme
-             .fontFamily "Montserrat"
-             .iconTheme (m/IconThemeData .color primary)
-             .splashFactory m/NoSplash.splashFactory
-             .useMaterial3 true)))
-   .home
-   (f/widget
-    :get {{{:flds [secondaryContainer]} .-colorScheme} m/Theme}
-    (m/Scaffold
-     .backgroundColor secondaryContainer
-     .appBar (m/AppBar .backgroundColor secondaryContainer
-                       .leading cabacus-button
-                       .leadingWidth 156
-                       .actions [settings/settings-button]
-                       .toolbarHeight 42)))
-   .body
-   m/SafeArea
-   m/Center
-   abacus/abacus))
 
+  ; workaround to aggressive tree-shaking
+  (let [_ [audio/bead-sound-stream-subscription
+           audio/audioplayers]])
+
+  (let [package-info (await (package-info/PackageInfo.fromPlatform))]
+    (f/run
+     (f/widget
+      :let [digits-atom (atom {:all [] :view 0})
+            settings-atom (atom settings/initial-settings)
+
+            seen-digits-cell
+            (f/$ (let [{:keys [view] ^List {:flds [length] :as all} :all}
+                       (f/<! digits-atom)]
+                   (subvec all (- length view))))
+
+            bead-dimensions-cell
+            (f/$ (let [{:keys [bead-size bead-style]} (f/<! settings-atom)
+                       ratio (state/bead-style-ratios bead-style)
+                       bead-dimensions (state/sizes-base bead-size)
+                       bead-width (* ratio (:height bead-dimensions))]
+                   (assoc bead-dimensions :width bead-width)))]
+      :bind {:digits-atom digits-atom
+             :settings-atom settings-atom
+             :bead-dimensions-cell bead-dimensions-cell
+             :package-info package-info
+             :seen-digits-cell seen-digits-cell}
+      :watch [{^m/ColorScheme
+               {:flds [primary onPrimary] :as color-scheme}
+               :color-scheme} state/color-cell]
+      (m/MaterialApp
+       .title "Cabacus School"
+     ; disable overscroll effects
+       .scrollBehavior
+       (.copyWith (m/ScrollBehavior) .overscroll false .scrollbars true)
+       .theme
+       (m/ThemeData
+        .colorScheme color-scheme
+        .fontFamily state/default-font
+        .iconTheme (m/IconThemeData .color primary)
+        .segmentedButtonTheme
+        (m/SegmentedButtonThemeData
+         .style
+         (m/ButtonStyle
+          .foregroundColor
+          (resolve-with m/Color? [m/WidgetState.selected] onPrimary)
+          .iconColor
+          (resolve-with m/Color? [m/WidgetState.selected] onPrimary)
+          .backgroundColor
+          (resolve-with m/Color? [m/WidgetState.selected] primary)
+          .visualDensity
+          (m/VisualDensity .vertical 1)))
+        .splashFactory m/NoSplash.splashFactory
+        .highlightColor primary
+        .useMaterial3 true)))
+     .home
+     (f/widget
+      :get {{{:flds [secondaryContainer]} .-colorScheme} m/Theme}
+      (m/Container .color secondaryContainer
+                   .alignment m/Alignment.center))
+     m/SafeArea
+     m/Column
+     .children
+     [above-abacus/above-abacus (m/Spacer) abacus/abacus (m/Spacer)])))

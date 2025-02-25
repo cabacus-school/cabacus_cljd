@@ -1,7 +1,6 @@
 (ns acme.state
   (:require ["package:flutter/material.dart" :as m]
-            [cljd.flutter :as f]
-            [acme.audio :as audio]))
+            [cljd.flutter :as f]))
 ;; FONTS
 
 (def numeric-font "CourierPrimeSans")
@@ -19,21 +18,18 @@
        :light-green m.Colors/lightGreen}
       (update-vals
        (fn [seed-color]
-         {:seed-color seed-color :color-scheme (m/ColorScheme.fromSeed .seedColor seed-color)}))))
+         {:seed-color seed-color
+          :color-scheme (m/ColorScheme.fromSeed .seedColor seed-color)}))))
 
-(defonce !color-key (atom :amber))
+(defonce color-atom (atom :amber))
 
-(def !color (f/$ (colors (f/<! !color-key))))
+(def color-cell (f/$ (colors (f/<! color-atom))))
 
 ;; STYLE
 
 (def frame-width 6)
 
-(def style-ratios {:narrow 3/2 :wide 5/3})
-
-(defonce !style-ratio-key (atom :wide))
-
-(def !style-ratio (f/$ (style-ratios (f/<! !style-ratio-key))))
+(def bead-style-ratios {:narrow 3/2 :wide 5/3})
 
 ;; SIZES
 
@@ -41,31 +37,15 @@
                  :medium {:height 42 :rod-width 14}
                  :large  {:height 48 :rod-width 16}})
 
-(defonce !size-key (atom :large))
+;; SPEED
 
-(def !size
-  (f/$ (let [{:keys [height] :as size-props} (sizes-base (f/<! !size-key))]
-         (->> (f/<! !style-ratio-key)
-              style-ratios
-              (* height)
-              (assoc size-props :width)))))
-
-;; DIGITS
-
-(defonce !digits-info
-  (-> (atom {:last-index-change nil
-             :digits []})
-      (add-watch
-       :play-bead-sounds
-       (fn [_ !digits-info {old-digits :digits}
-            {:keys [last-index-change] new-digits :digits}]
-         (when last-index-change
-           (swap! !digits-info assoc :last-index-change nil)
-           (let [old-digit (get old-digits last-index-change)
-                 new-digit (get new-digits last-index-change)
-                 top-changed (not= (quot old-digit 5) (quot new-digit 5))
-                 bottom-changed (not= (mod old-digit 5) (mod new-digit 5))]
-             (audio/play-bead-async (+ (if top-changed 1 0)
-                                       (if bottom-changed 1 0)))))))))
-
-(defonce !num-hint? (atom true))
+(def speeds {:slow {:bead-animation (dart:core/Duration .milliseconds 400)
+                    :bead-reset-interval (dart:core/Duration .milliseconds 20)
+                    :bead-sound-interval (dart:core/Duration .milliseconds 10)}
+             :fast {:bead-animation (dart:core/Duration .milliseconds 200)
+                    :bead-reset-interval (dart:core/Duration .milliseconds 10)
+                    :bead-sound-interval (dart:core/Duration .milliseconds 5)}
+             ; :instant {:bead-animation dart:core/Duration.zero
+             ;           :bead-reset-interval dart:core/Duration.zero
+             ;           :bead-sound-interval dart:core/Duration.zero}
+             })

@@ -2,6 +2,19 @@
 
 A new Flutter project.
 
+## Todo
+
+### 16 Apr 2025
+
+- [X] Render digits above.
+- [X] Fix: digits above doesn't update when number of digits change due to change in bead width.
+- [X] Set font styles to digits above.
+- [ ] Add colours button
+
+### 15 Apr 2025
+
+- [X] Lift state of seen digits up so that above abacus can show the digits.
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.

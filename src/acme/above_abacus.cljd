@@ -1,0 +1,119 @@
+(ns acme.above-abacus
+  (:require
+   ["dart:async" :as async]
+   ["dart:ui" :as ui]
+   ["package:flutter/material.dart" :as m]
+   ["package:flutter/services.dart" :as s]
+   [acme.audio :as audio]
+   [acme.settings :as settings]
+   [acme.state :as state]
+   [acme.utils :as utils]
+   [cljd.flutter :as f]))
+
+(def ^:private jump-letter-duration (Duration .milliseconds 75))
+
+(defn ^:private jump-letters [letters]
+  (-> (async/Stream.periodic
+       jump-letter-duration
+       #(get-in letters [% :controller]))
+      (.take (.-length ^List letters))
+      (.forEach (fn [animation-controller]
+                  (await (.forward ^m/AnimationController animation-controller))
+                  (.reverse ^m/AnimationController animation-controller)))))
+
+(def cabacus-button
+  (f/widget
+   :vsync vsync
+   :get [:settings-atom :digits-atom]
+   :watch [{:keys [speed vibration sound]} settings-atom]
+   :let [{{:keys [bead-reset-interval]} speed} state/speeds]
+   :managed [disposed? (atom false) :dispose (#(reset! % true))
+
+             letters
+             (doto (vec (for [c "CABACUS"]
+                          {:letter c
+                           :controller (m/AnimationController
+                                        .duration jump-letter-duration
+                                        .vsync vsync)}))
+               (as-> $ (reverse $)
+                 (future (loop [wait-time 45]
+                           (utils/await-duration .seconds wait-time)
+                           (when-not @disposed?
+                             (-> (try
+                                   (jump-letters $)
+                                   true
+                                   (catch Exception _ false))
+                                 (when (recur (+ 45 (rand-int 31))))))))))
+             :dispose (#(doseq [{:keys [controller]} %]
+                          (.dispose ^m/AnimationController controller)))]
+   (m/TextButton
+    .onPressed
+    (fn []
+      (jump-letters letters)
+      (when vibration (s/HapticFeedback.heavyImpact))
+      (let [{:keys [all view]} @digits-atom
+            bead-sound-interval
+            (get-in state/speeds [speed :bead-sound-interval])]
+        (doseq [[i d] (map-indexed list all)
+                :when (and (pos-int? d) (>= (+ i view) (.-length ^List all)))]
+          (when sound
+            (when (>= d 5) (audio/play-bead-sound bead-sound-interval))
+            (when (< 0 (mod d 5)) (audio/play-bead-sound bead-sound-interval)))
+          (swap! digits-atom assoc-in [:all i] 0)
+          (await (async/Future.delayed bead-reset-interval))))
+      nil))
+   :padding {:horizontal 12}
+   (m/Row .mainAxisSize m/MainAxisSize.min)
+   .children
+   (for [{:keys [letter controller]} letters]
+     (f/widget
+      (m/SlideTransition
+       .position
+       (-> ^m/AnimationController controller
+           (.drive
+            (.chain (m/Tween .begin ui/Offset.zero
+                             .end (ui/Offset 0 -0.1))
+                    (m/CurveTween .curve m/Curves.easeOutQuad)))))
+      :get {{{:flds [headlineMedium]} .-textTheme
+             {:flds [primary]} .-colorScheme} m/Theme}
+      (m/Text letter
+              .style (-> headlineMedium
+                         (.copyWith .color primary
+                                    .fontWeight m/FontWeight.bold
+                                    .fontFamily state/cabacus-font)))))))
+
+(def ^:private digits-above
+  (f/widget
+   :get [:settings-atom :seen-digits-cell]
+   :watch [{:keys [digits-above]} settings-atom]
+   :when digits-above
+   :watch [^List {:flds [length]} seen-digits-cell]
+   m/SelectionArea
+   (m/Row .mainAxisSize m/MainAxisSize.min)
+   .children
+   (map
+    #(f/widget
+      :watch [{digit %} seen-digits-cell]
+      :get {{{:flds [headlineSmall]} .-textTheme} m/Theme}
+      (m/Text (str digit)
+              .style (.copyWith headlineSmall
+                                .fontFamily state/numeric-font
+                                .fontWeight (if (zero? (mod (- length %) 3))
+                                              m/FontWeight.bold
+                                              m/FontWeight.normal))))
+    (range length))))
+
+(def above-abacus
+  (m/Stack
+   .alignment m/Alignment.center
+   .children
+   [(f/widget
+     :get [:settings-atom]
+     :watch [{:keys [cabacus-side]} settings-atom]
+     (m/Row .mainAxisAlignment m/MainAxisAlignment.spaceBetween)
+     .children
+     ((case cabacus-side
+        :left identity
+        :right reverse)
+      [cabacus-button settings/settings-button]))
+    digits-above]))
