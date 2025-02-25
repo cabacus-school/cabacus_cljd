@@ -6,15 +6,12 @@
             [cljd.flutter :as f]
             [acme.state :as state]))
 
-(def bead
+(defn bead [& {:keys [width height bead-color border-color]}]
   (f/widget
-   :watch [{:keys [width height]} state/!size]
    :width width :height height :padding {:horizontal 2}
    (m/Container .decoration (m/BoxDecoration))
    (f/widget
-    :watch [{:keys [seed-color]} state/!color]
-    :let [shade-color (m/Color.lerp seed-color m/Colors.black 0.07)]
-    :get {{{:flds [onPrimaryContainer]} .-colorScheme} m/Theme}
+    :let [shade-color (m/Color.lerp bead-color m/Colors.black 0.07)]
     m/Container
     .decoration
     (m/ShapeDecoration
@@ -22,14 +19,25 @@
                 .begin m/Alignment.topCenter
                 .end m/Alignment.bottomCenter
                 .stops [0.0 0.46 0.54 1.0]
-                .colors [seed-color seed-color shade-color shade-color]))
+                .colors [bead-color bead-color shade-color shade-color]))
     .shape
     (m/BeveledRectangleBorder
      .borderRadius (m/BorderRadius.all
                     (m/Radius.elliptical (/ width 3) (dec (/ height 2))))
      .side (m/BorderSide .width 0.1
-                         .color onPrimaryContainer
+                         .color border-color
                          .strokeAlign m/BorderSide.strokeAlignCenter)))))
+
+(def used-bead
+  (f/widget
+   :watch [{:keys [width height]} state/!size
+           {bead-color :seed-color
+            {border-color .-onPrimaryContainer} :color-scheme} state/!color]
+   (bead
+    :width width
+    :height height
+    :bead-color bead-color
+    :border-color border-color)))
 
 (defn rod [child]
   (f/widget
@@ -85,7 +93,7 @@
                    (let [last-index-change (+ idx (- length seen-length))]
                      (-> (assoc digits-info :last-index-change last-index-change)
                          (update-in [:digits last-index-change] #((if (< % 5) + -) % 5))))))))
-       bead))
+       used-bead))
      (when num-hint?
        (f/widget
         m/IgnorePointer
@@ -136,7 +144,7 @@
                       (-> (assoc digits-info :last-index-change last-index-change)
                           (update-in [:digits last-index-change]
                                      #(get-in lower-rod-reference [% bead-idx]))))))))
-        bead))))))
+        used-bead))))))
 
 (def dot-beam
   (f/widget
