@@ -1,6 +1,7 @@
 (ns acme.main
   (:require
    ["dart:async" :as async]
+   ["dart:core" :as core]
    ["dart:ui" :as ui]
    ["package:flutter/material.dart" :as m]
    ["package:flutter/services.dart" :as s]
@@ -12,61 +13,65 @@
    [cljd.flutter :as f]))
 
 (def cabacus-button
-  (let [!disposed? (atom false)]
-    (f/widget
-     :let [jump-letter-duration (Duration .milliseconds 75)
-           jump-letters
-           (fn [letters]
-             (-> (async/Stream.periodic jump-letter-duration
-                                        #(get-in letters [% :controller]))
-                 (.take (.-length ^List letters))
-                 (.forEach #(do (await (.forward ^m/AnimationController %))
-                                (.reverse ^m/AnimationController %)))))]
-     :vsync vsync
-     :managed [letters
-               (doto
-                (vec (for [c "CABACUS"]
-                       {:letter c
-                        :controller (m/AnimationController
-                                     .duration jump-letter-duration
-                                     .vsync vsync)}))
-                 (as-> letters
-                       (future
-                         (let [reversed-letters (vec (reverse letters))]
-                           (doseq [interval (repeatedly #(+ 45 (rand-int 31)))
-                                   :while (not @!disposed?)]
-                             (utils/await-duration .seconds interval)
-                             (jump-letters reversed-letters))))))
-               :dispose (#(do (reset! !disposed? true)
-                              (doseq [{:keys [controller]} %]
-                                (.dispose ^m/AnimationController controller))))]
-     (m/TextButton
-      .onPressed (fn []
-                   (jump-letters letters)
-                   (s/HapticFeedback.heavyImpact)
-                   (doseq [[i d] (map-indexed list (:digits @state/!digits-info)) :when (pos-int? d)]
-                     (swap! state/!digits-info
-                            #(->  (assoc % :last-index-change i)
-                                  (assoc-in [:digits i] 0)))
-                     (utils/await-duration .milliseconds 20))
-                   nil))
-     :padding {:horizontal 12}
-     (m/Row .mainAxisSize m/MainAxisSize.min)
-     .children
-     (for [{:keys [letter controller]} letters]
-       (f/widget
-        (m/SlideTransition
-         .position (.drive ^m/AnimationController controller
-                           (.chain (m/Tween .begin ui/Offset.zero
-                                            .end (ui/Offset 0 -0.1))
-                                   (m/CurveTween .curve m/Curves.easeOutQuad))))
-        :get {{{:flds [headlineMedium]} .-textTheme
-               {:flds [primary]} .-colorScheme} m/Theme}
-        (m/Text letter
-                .style (.copyWith headlineMedium
-                                  .color primary
-                                  .fontWeight m/FontWeight.bold
-                                  .fontFamily cabacus-font)))))))
+  (f/widget
+   :let [jump-letter-duration (Duration .milliseconds 75)
+         jump-letters
+         (fn [letters]
+           (-> (async/Stream.periodic jump-letter-duration
+                                      #(get-in letters [% :controller]))
+               (.take (.-length ^List letters))
+               (.forEach #(do (await (.forward ^m/AnimationController %))
+                              (.reverse ^m/AnimationController %)))))]
+   :vsync vsync
+   :watch [_ (atom true)] ; to make hot reload dispose managed resources
+   :managed [jump-reverse-stream-controller (async/StreamController) :dispose .close
+             letters
+             (let [letters (vec
+                            (for [c "CABACUS"]
+                              {:letter c
+                               :controller (m/AnimationController
+                                            .duration jump-letter-duration
+                                            .vsync vsync)}))
+                   reversed-letters (vec (reverse letters))]
+               (-> jump-reverse-stream-controller
+                   .-stream
+                   (.listen (fn [_]
+                              (utils/await-duration .seconds (+ 45 (rand-int 31)))
+                              (jump-letters reversed-letters)
+                              (.add jump-reverse-stream-controller nil))))
+               (.add jump-reverse-stream-controller nil)
+               letters)
+             :dispose (#(doseq [{:keys [controller]} %]
+                          (.dispose ^m/AnimationController controller)))]
+   (m/TextButton
+    .onPressed (fn []
+                 (jump-letters letters)
+                 (s/HapticFeedback.heavyImpact)
+                 (doseq [[i d] (map-indexed list (:digits @state/!digits-info)) :when (pos-int? d)]
+                   (swap! state/!digits-info
+                          #(->  (assoc % :last-index-change i)
+                                (assoc-in [:digits i] 0)))
+                   (utils/await-duration .milliseconds 20))
+                 nil))
+   :padding {:horizontal 12}
+   (m/Row .mainAxisSize m/MainAxisSize.min)
+   .children
+   (for [{:keys [letter controller]} letters]
+     (f/widget
+      (m/SlideTransition
+       .position
+       (-> ^m/AnimationController controller
+           (.drive
+            (.chain (m/Tween .begin ui/Offset.zero
+                             .end (ui/Offset 0 -0.1))
+                    (m/CurveTween .curve m/Curves.easeOutQuad)))))
+      :get {{{:flds [headlineMedium]} .-textTheme
+             {:flds [primary]} .-colorScheme} m/Theme}
+      (m/Text letter
+              .style (-> headlineMedium
+                         (.copyWith .color primary
+                                    .fontWeight m/FontWeight.bold
+                                    .fontFamily cabacus-font)))))))
 
 (defn main []
   (m/WidgetsFlutterBinding.ensureInitialized)
@@ -83,7 +88,7 @@
     (m/MaterialApp
      .title "Cabacus School"
      ; disable overscroll effects
-     .scrollBehavior (.copyWith (m/ScrollBehavior) .overscroll false)
+     .scrollBehavior (.copyWith (m/ScrollBehavior) .overscroll false .scrollbars true)
      .theme (m/ThemeData
              .colorScheme color-scheme
              .fontFamily "Montserrat"
@@ -96,9 +101,10 @@
     (m/Scaffold
      .backgroundColor secondaryContainer
      .appBar (m/AppBar .backgroundColor secondaryContainer
-                       .title cabacus-button
-                       .titleSpacing 0
-                       .actions [settings/settings-button])))
+                       .leading cabacus-button
+                       .leadingWidth 156
+                       .actions [settings/settings-button]
+                       .toolbarHeight 42)))
    .body
    m/SafeArea
    m/Center
