@@ -1,0 +1,20 @@
+{
+  "buildFiles": [
+    "/home/local/KLASS/benjamin.tan/fvm/versions/3.29.0/packages/flutter_tools/gradle/src/main/groovy/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/home/local/KLASS/benjamin.tan/Android/Sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/home/local/KLASS/benjamin.tan/nonsense/cabacus_cljd/android/app/.cxx/Debug/12522s1b/arm64-v8a",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/home/local/KLASS/benjamin.tan/Android/Sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/home/local/KLASS/benjamin.tan/nonsense/cabacus_cljd/android/app/.cxx/Debug/12522s1b/arm64-v8a",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {}
+}
