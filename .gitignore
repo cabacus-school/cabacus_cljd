@@ -43,6 +43,7 @@ app.*.map.json
 /android/app/release
 /android/app/.gradle
 /android/app/local.properties
+/android/app/.cxx
 
 # ClojureDart
 .cpcache/
