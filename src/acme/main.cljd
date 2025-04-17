@@ -32,6 +32,8 @@
      (f/widget
       :let [digits-atom (atom {:all [] :view 0})
             settings-atom (atom settings/initial-settings)
+            color-atom (atom :amber)
+            color-cell (f/$ (state/colors (f/<! color-atom)))
 
             seen-digits-cell
             (f/$ (let [{:keys [view] ^List {:flds [length] :as all} :all}
@@ -48,10 +50,13 @@
              :settings-atom settings-atom
              :bead-dimensions-cell bead-dimensions-cell
              :package-info package-info
-             :seen-digits-cell seen-digits-cell}
+             :seen-digits-cell seen-digits-cell
+             :color-atom color-atom
+             :color-cell color-cell}
       :watch [{^m/ColorScheme
                {:flds [primary onPrimary] :as color-scheme}
-               :color-scheme} state/color-cell]
+               :color-scheme}
+              color-cell]
       (m/MaterialApp
        .title "Cabacus School"
      ; disable overscroll effects

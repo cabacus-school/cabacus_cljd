@@ -4,12 +4,19 @@ A new Flutter project.
 
 ## Todo
 
+### 18 Apr 2025
+
+- [ ] Change app icon.
+- [X] Add more colors.
+- [ ] Use shared preferences to store local settings.
+
 ### 16 Apr 2025
 
 - [X] Render digits above.
 - [X] Fix: digits above doesn't update when number of digits change due to change in bead width.
 - [X] Set font styles to digits above.
-- [ ] Add colours button
+- [X] Add colors button.
+- [X] Add color choices in colors menu.
 
 ### 15 Apr 2025
 

@@ -33,11 +33,11 @@
 
 (def used-bead
   (f/widget
-   :get [:bead-dimensions-cell]
+   :get [:bead-dimensions-cell :color-cell]
    :watch [{:keys [width height]} bead-dimensions-cell
            {bead-color :seed-color
             ^m/ColorScheme {border-color .-onPrimaryContainer} :color-scheme}
-           state/color-cell]
+           color-cell]
    :bind {:bead-width width
           :bead-height height
           :bead-color bead-color

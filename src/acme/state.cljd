@@ -1,6 +1,6 @@
 (ns acme.state
-  (:require ["package:flutter/material.dart" :as m]
-            [cljd.flutter :as f]))
+  (:require ["package:flutter/material.dart" :as m]))
+
 ;; FONTS
 
 (def numeric-font "CourierPrimeSans")
@@ -9,21 +9,25 @@
 
 ;; COLORS
 
+; Nice place to look for colors: https://colorcodes.io/
 (def colors
   (-> {:amber m.Colors/amber
+       :wood (m/Color.fromARGB 255 164 116 73)
        :blue-grey m.Colors/blueGrey
        :grey m.Colors/grey
        :light-blue-accent m.Colors/lightBlueAccent
        :purple-accent m.Colors/purpleAccent
-       :light-green m.Colors/lightGreen}
+       :light-green m.Colors/lightGreen
+       :dark-blue (m/Color.fromARGB 255 21 96 189)
+       :blue m/Colors.lightBlue
+       :red m/Colors.red
+       :pink (m/Color.fromARGB 255 255 62 165)
+       :orange m/Colors.orange
+       :turquoise (m/Color.fromARGB 255 83 176 174)}
       (update-vals
        (fn [seed-color]
          {:seed-color seed-color
           :color-scheme (m/ColorScheme.fromSeed .seedColor seed-color)}))))
-
-(defonce color-atom (atom :amber))
-
-(def color-cell (f/$ (colors (f/<! color-atom))))
 
 ;; STYLE
 

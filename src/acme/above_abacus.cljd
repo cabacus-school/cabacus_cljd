@@ -4,6 +4,7 @@
    ["dart:ui" :as ui]
    ["package:flutter/material.dart" :as m]
    ["package:flutter/services.dart" :as s]
+   [acme.abacus :as abacus]
    [acme.audio :as audio]
    [acme.settings :as settings]
    [acme.state :as state]
@@ -103,6 +104,50 @@
                                               m/FontWeight.normal))))
     (range length))))
 
+(def colors-button
+  (f/widget
+   :context ctx
+   (m/IconButton .icon (m/Icon m/Icons.palette_rounded))
+   .onPressed
+   (fn []
+     (m/showDialog
+      .context ctx
+      .builder
+      (f/build
+       []
+       (m/PopScope .onPopInvokedWithResult (fn [_ _] (dart:core/print "ROFL")))
+       (m/AlertDialog)
+       .content
+       (f/widget
+        :width 400
+        (m/GridView.count .shrinkWrap true
+                          .childAspectRatio 2
+                          .crossAxisCount 3)
+        .children
+        (map
+         (fn [[color-key
+               {^m/ColorScheme {border-color .-onPrimaryContainer} :color-scheme
+                bead-color :seed-color}]]
+           (f/widget
+            :get [:color-atom]
+            :watch [selected-color color-atom]
+            (m/ChoiceChip
+             .showCheckmark false
+             .elevation 2
+             .selected (= color-key selected-color)
+             .onSelected (fn [selected]
+                           (when selected (reset! color-atom color-key))))
+            .label
+            :get [:bead-dimensions-cell]
+            :watch [{:keys [width height]} bead-dimensions-cell]
+            :bind {:bead-width width
+                   :bead-height height
+                   :bead-color bead-color
+                   :border-color border-color}
+            abacus/bead))
+         state/colors))))
+     nil)))
+
 (def above-abacus
   (m/Stack
    .alignment m/Alignment.center
@@ -110,10 +155,15 @@
    [(f/widget
      :get [:settings-atom]
      :watch [{:keys [cabacus-side]} settings-atom]
+     :let [arrangement (case cabacus-side
+                         :left identity
+                         :right reverse)]
      (m/Row .mainAxisAlignment m/MainAxisAlignment.spaceBetween)
      .children
-     ((case cabacus-side
-        :left identity
-        :right reverse)
-      [cabacus-button settings/settings-button]))
+     (arrangement
+      [cabacus-button
+       (f/widget
+        (m/Row .mainAxisSize m/MainAxisSize.min)
+        .children
+        (arrangement [colors-button settings/settings-button]))]))
     digits-above]))

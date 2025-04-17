@@ -62,12 +62,12 @@
    #(m/ButtonSegment
      .value %
      .label (f/widget
-             :get [:settings-atom]
+             :get [:settings-atom :color-cell]
              :watch [{:keys [bead-style]} settings-atom
                      {bead-color :seed-color
                       ^m/ColorScheme {border-color .-onPrimaryContainer}
                       :color-scheme}
-                     state/color-cell]
+                     color-cell]
              :let [{{:keys [height]} %} state/sizes-base
                    ratio (bead-style state/bead-style-ratios)
                    width (* ratio height)]
@@ -86,12 +86,12 @@
    #(m/ButtonSegment
      .value %
      .label (f/widget
-             :get [:bead-dimensions-cell]
+             :get [:bead-dimensions-cell :color-cell]
              :watch [{:keys [height]} bead-dimensions-cell
                      {bead-color :seed-color
                       ^m/ColorScheme {border-color .-onPrimaryContainer}
                       :color-scheme}
-                     state/color-cell]
+                     color-cell]
              :let [width (* (state/bead-style-ratios %) height)]
              :bind {:bead-width width
                     :bead-height height
