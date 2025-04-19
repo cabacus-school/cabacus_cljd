@@ -4,11 +4,18 @@ A new Flutter project.
 
 ## Todo
 
+### 19 Apr 2025
+
+- [X] Update to latest flutter stable 3.29.3.
+- [X] Find out that `reader/read-string` can read edn.
+- [X] Create new persistent atom that uses edn.
+- [ ] Finish alert dialog of colors button.
+
 ### 18 Apr 2025
 
 - [ ] Change app icon.
 - [X] Add more colors.
-- [ ] Use shared preferences to store local settings.
+- [X] Use shared preferences to store local settings.
 
 ### 16 Apr 2025
 

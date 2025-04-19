@@ -1,0 +1,31 @@
+(ns acme.shared-preferences
+  (:require ["package:shared_preferences/shared_preferences.dart" :as sp]
+            [cljd.reader :as reader]))
+
+(def ^:private instance (atom nil))
+
+(defn init
+  "Must be called before any data can be persistent. Call it in `main`."
+  []
+  (reset! instance (await (sp/SharedPreferences.getInstance))))
+
+(defn persistent-edn-atom
+  "Make an atom of edn data that is persistently stored on disk.
+  `k` is a keyword name assigned to the atom, i.e. `:sound`.
+  `x` is the default initial value.
+  `options` are passed to the atom.
+  "
+  [k x & options]
+  (let [k-name (name k)
+        atom-value (if (and (some? @instance)
+                            (.containsKey ^sp/SharedPreferences @instance
+                                          k-name))
+                     (->> (.getString ^sp/SharedPreferences @instance k-name)
+                          reader/read-string)
+                     x)
+        new-atom (apply (partial atom atom-value) options)]
+    (add-watch new-atom k (fn [_ _ _ new-val]
+                            (when (some? @instance)
+                              (->> (prn-str new-val)
+                                   (.setString ^sp/SharedPreferences @instance
+                                               k-name)))))))

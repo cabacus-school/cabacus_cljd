@@ -8,6 +8,7 @@
    [acme.audio :as audio]
    [acme.settings :as settings]
    [acme.state :as state]
+   [acme.shared-preferences :as sp]
    [cljd.flutter :as f]))
 
 (defmacro resolve-with [type states value]
@@ -27,12 +28,15 @@
   (let [_ [audio/bead-sound-stream-subscription
            audio/audioplayers]])
 
+  (sp/init) ; initialize shared preferences
+
   (let [package-info (await (package-info/PackageInfo.fromPlatform))]
     (f/run
      (f/widget
-      :let [digits-atom (atom {:all [] :view 0})
-            settings-atom (atom settings/initial-settings)
-            color-atom (atom :amber)
+      :let [digits-atom (sp/persistent-edn-atom :digits {:all [] :view 0})
+            settings-atom (sp/persistent-edn-atom :settings
+                                                  settings/initial-settings)
+            color-atom (sp/persistent-edn-atom :color :amber)
             color-cell (f/$ (state/colors (f/<! color-atom)))
 
             seen-digits-cell

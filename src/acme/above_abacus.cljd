@@ -115,7 +115,6 @@
       .builder
       (f/build
        []
-       (m/PopScope .onPopInvokedWithResult (fn [_ _] (dart:core/print "ROFL")))
        (m/AlertDialog)
        .content
        (f/widget
