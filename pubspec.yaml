@@ -49,6 +49,8 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.3
+  rename_app: ^1.6.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -105,3 +107,12 @@ flutter:
         - asset: assets/fonts/Montserrat/static/Montserrat-Regular.ttf
         - asset: assets/fonts/Montserrat/static/Montserrat-Italic.ttf
           style: italic
+
+# Run the following command to generate icons for android and ios
+# Don't generate for web as this doesn't support svg icons which we use for web
+# dart run flutter_launcher_icons
+flutter_launcher_icons:
+  image_path: "assets/icon/app_icon_512.png"
+  android: true
+  remove_alpha_ios: true
+  ios: true
