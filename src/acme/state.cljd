@@ -10,20 +10,20 @@
 ;; COLORS
 
 ; Nice place to look for colors: https://colorcodes.io/
+; https://www.schemecolor.com/
 (def colors
   (-> {:amber m.Colors/amber
-       :wood (m/Color.fromARGB 255 164 116 73)
-       :blue-grey m.Colors/blueGrey
-       :grey m.Colors/grey
-       :light-blue-accent m.Colors/lightBlueAccent
-       :purple-accent m.Colors/purpleAccent
-       :light-green m.Colors/lightGreen
-       :dark-blue (m/Color.fromARGB 255 21 96 189)
-       :blue m/Colors.lightBlue
-       :red m/Colors.red
-       :pink (m/Color.fromARGB 255 255 62 165)
-       :orange m/Colors.orange
-       :turquoise (m/Color.fromARGB 255 83 176 174)}
+       :medium-champagne (m/Color.fromARGB 255 247 237 163)
+       :cotton-candy-pink (m/Color.fromARGB 255 255 188 217)
+       :burlap-brown (m/Color.fromARGB 255 185 163 122)
+       :pastel-green (m/Color.fromARGB 255 119 221 119)
+       :light-purple (m/Color.fromARGB 255 197 180 227)
+       :pastel-blue (m/Color.fromARGB 255 139 211 230)
+       :pastel-red (m/Color.fromARGB 255 255 109 106)
+       :pastel-grey (m/Color.fromARGB 255 207 207 196)
+       :very-light-tangelo (m/Color.fromARGB 255 254 181 127)
+       :pastel-turquoise (m/Color.fromARGB 255 153 197 196)
+       :papaya-whip (m/Color.fromARGB 255 253 240 215)}
       (update-vals
        (fn [seed-color]
          {:seed-color seed-color

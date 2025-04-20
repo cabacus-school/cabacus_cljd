@@ -159,7 +159,7 @@
     (str "Cabacus " (.-version ^package-info/PackageInfo package-info))
     .style (.copyWith labelSmall .fontStyle m/FontStyle.italic))))
 
-(def ^:private ok-button
+(def ok-button
   (f/widget
    :get [m/Navigator]
    (m/FilledButton .onPressed #(.pop navigator))

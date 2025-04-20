@@ -9,7 +9,7 @@ A new Flutter project.
 - [X] Update to latest flutter stable 3.29.3.
 - [X] Find out that `reader/read-string` can read edn.
 - [X] Create new persistent atom that uses edn.
-- [ ] Finish alert dialog of colors button.
+- [X] Finish alert dialog of colors button.
 
 ### 18 Apr 2025
 
