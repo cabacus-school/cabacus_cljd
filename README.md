@@ -4,6 +4,14 @@ A new Flutter project.
 
 ## Todo
 
+### High Priority 😃
+
+### Medium Priority 😊
+
+### Low Priority 😌
+
+- [ ] 2025-05-01 Fix app icon on some devices (like pixel 8)
+
 ### 19 Apr 2025
 
 - [X] Update to latest flutter stable 3.29.3.
@@ -13,7 +21,7 @@ A new Flutter project.
 
 ### 18 Apr 2025
 
-- [ ] Change app icon.
+- [X] Change app icon.
 - [X] Add more colors.
 - [X] Use shared preferences to store local settings.
 
