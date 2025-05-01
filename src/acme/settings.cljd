@@ -156,7 +156,7 @@
    :get [:package-info]
    :get {{{:flds [labelSmall]} .-textTheme} m/Theme}
    (m/Text
-    (str "Cabacus " (.-version ^package-info/PackageInfo package-info))
+    (str "Cabacus Math " (.-version ^package-info/PackageInfo package-info))
     .style (.copyWith labelSmall .fontStyle m/FontStyle.italic))))
 
 (def ok-button
