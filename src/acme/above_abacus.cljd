@@ -58,8 +58,8 @@
         (doseq [[i d] (map-indexed list all)
                 :when (and (pos-int? d) (>= (+ i view) (.-length ^List all)))]
           (when sound
-            (when (>= d 5) (audio/play-bead-sound bead-sound-interval))
-            (when (< 0 (mod d 5)) (audio/play-bead-sound bead-sound-interval)))
+            (when (>= d 5) (audio/play-bead-ap bead-sound-interval))
+            (when (< 0 (mod d 5)) (audio/play-bead-ap bead-sound-interval)))
           (swap! digits-atom assoc-in [:all i] 0)
           (await (async/Future.delayed bead-reset-interval))))
       nil))

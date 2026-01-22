@@ -108,7 +108,7 @@
                   (fn [^List {:flds [length] :as digits}]
                     (when sound
                       (-> (get-in state/speeds [speed :bead-sound-interval])
-                          audio/play-bead-sound))
+                          audio/play-bead-ap))
                     (let [raw-idx (+ idx (- length seen-length))]
                       (update digits raw-idx #((if (< % 5) + -) % 5)))))))
         used-bead)))
@@ -164,7 +164,7 @@
                   (fn [^List {:flds [length] :as digits}]
                     (when sound
                       (-> (get-in state/speeds [speed :bead-sound-interval])
-                          audio/play-bead-sound))
+                          audio/play-bead-ap))
                     (let [raw-idx (+ idx (- length seen-length))]
                       (update digits
                               raw-idx

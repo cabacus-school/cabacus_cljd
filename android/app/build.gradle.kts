@@ -8,7 +8,12 @@ plugins {
 android {
     namespace = "com.example.cljd_cabacus_cljd"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    // - audioplayers_android requires Android NDK 27.0.12077973
+    // - package_info_plus requires Android NDK 27.0.12077973
+    // - path_provider_android requires Android NDK 27.0.12077973
+    // - shared_preferences_android requires Android NDK 27.0.12077973
+    // ndkVersion = flutter.ndkVersion
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
